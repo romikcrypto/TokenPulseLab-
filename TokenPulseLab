@@ -1,0 +1,103 @@
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
+
+class TokenPulseLab:
+    def __init__(self, base_url='https://api.coingecko.com/api/v3'):
+        self.base_url = base_url
+        self.data = {}
+
+    def fetch_token_data(self, token_id: str, vs_currency: str = 'usd', days: int = 30) -> str:
+        endpoint = f'{self.base_url}/coins/{token_id}/market_chart'
+        params = {
+            'vs_currency': vs_currency,
+            'days': days
+        }
+        response = requests.get(endpoint, params=params)
+        if response.status_code == 200:
+            self.data[token_id] = response.json()
+            return f"Market data for {token_id} fetched successfully."
+        else:
+            return f"Failed to fetch data: {response.status_code} - {response.text}"
+
+    def get_historical_prices(self, token_id: str) -> pd.DataFrame:
+        if token_id not in self.data:
+            return pd.DataFrame()
+        prices = self.data[token_id]['prices']
+        df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        return df
+
+    def get_historical_volumes(self, token_id: str) -> pd.DataFrame:
+        if token_id not in self.data:
+            return pd.DataFrame()
+        volumes = self.data[token_id]['total_volumes']
+        df = pd.DataFrame(volumes, columns=['timestamp', 'volume'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        return df
+
+    def get_market_caps(self, token_id: str) -> pd.DataFrame:
+        if token_id not in self.data:
+            return pd.DataFrame()
+        market_caps = self.data[token_id]['market_caps']
+        df = pd.DataFrame(market_caps, columns=['timestamp', 'market_cap'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        return df
+
+    def plot_price_trends(self, token_id: str):
+        df = self.get_historical_prices(token_id)
+        if df.empty:
+            print("No data available to plot.")
+            return
+        plt.figure(figsize=(12, 6))
+        plt.plot(df['timestamp'], df['price'], label='Price')
+        plt.title(f'{token_id.capitalize()} Price Trends')
+        plt.xlabel('Date')
+        plt.ylabel('Price (USD)')
+        plt.legend()
+        plt.show()
+
+    def plot_volume_trends(self, token_id: str):
+        df = self.get_historical_volumes(token_id)
+        if df.empty:
+            print("No data available to plot.")
+            return
+        plt.figure(figsize=(12, 6))
+        plt.plot(df['timestamp'], df['volume'], label='Volume', color='orange')
+        plt.title(f'{token_id.capitalize()} Volume Trends')
+        plt.xlabel('Date')
+        plt.ylabel('Volume')
+        plt.legend()
+        plt.show()
+
+    def plot_market_cap_trends(self, token_id: str):
+        df = self.get_market_caps(token_id)
+        if df.empty:
+            print("No data available to plot.")
+            return
+        plt.figure(figsize=(12, 6))
+        plt.plot(df['timestamp'], df['market_cap'], label='Market Cap', color='green')
+        plt.title(f'{token_id.capitalize()} Market Cap Trends')
+        plt.xlabel('Date')
+        plt.ylabel('Market Cap (USD)')
+        plt.legend()
+        plt.show()
+
+# Example Usage
+if __name__ == "__main__":
+    token_pulse_lab = TokenPulseLab()
+
+    # Fetch market data for Bitcoin (BTC) for the past 30 days
+    print(token_pulse_lab.fetch_token_data('bitcoin', 'usd', 30))
+
+    # Fetch market data for Ethereum (ETH) for the past 30 days
+    print(token_pulse_lab.fetch_token_data('ethereum', 'usd', 30))
+
+    # Plot price trends for Bitcoin
+    token_pulse_lab.plot_price_trends('bitcoin')
+
+    # Plot volume trends for Ethereum
+    token_pulse_lab.plot_volume_trends('ethereum')
+
+    # Plot market cap trends for Bitcoin
+    token_pulse_lab.plot_market_cap_trends('bitcoin')
